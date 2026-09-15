@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { drivingSideFor } from "./jurisdictions";
-import { addRoadLayout, createEmptyScene, moveRoadLayout } from "./sceneManifest";
+import {
+  addRoadLayout,
+  clearSceneObjects,
+  createEmptyScene,
+  moveRoadLayout,
+} from "./sceneManifest";
 
 describe("createEmptyScene", () => {
   it("stores the jurisdiction as the single source of truth for driving side", () => {
@@ -76,6 +81,30 @@ describe("addRoadLayout", () => {
     const before = createEmptyScene("SE");
     addRoadLayout(before, "straight_road", { x: 10, y: 10 });
     expect(before.road_layouts).toEqual([]);
+  });
+});
+
+describe("clearSceneObjects", () => {
+  it("removes every placed Scene Object", () => {
+    let scene = createEmptyScene("SE");
+    scene = addRoadLayout(scene, "straight_road", { x: 10, y: 10 });
+    scene = addRoadLayout(scene, "roundabout", { x: 20, y: 20 });
+
+    expect(clearSceneObjects(scene).road_layouts).toEqual([]);
+  });
+
+  it("keeps what identifies the Scene, so it is the same Scene emptied", () => {
+    const scene = addRoadLayout(createEmptyScene("GB"), "t_junction", { x: 10, y: 10 });
+    const cleared = clearSceneObjects(scene);
+
+    expect(cleared.scene_id).toBe(scene.scene_id);
+    expect(cleared.jurisdiction).toBe("GB");
+  });
+
+  it("does not mutate the manifest it was given", () => {
+    const scene = addRoadLayout(createEmptyScene("SE"), "straight_road", { x: 10, y: 10 });
+    clearSceneObjects(scene);
+    expect(scene.road_layouts).toHaveLength(1);
   });
 });
 

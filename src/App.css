@@ -52,6 +52,12 @@
   background: #fff;
 }
 
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .parameters {
   min-width: 15rem;
 }

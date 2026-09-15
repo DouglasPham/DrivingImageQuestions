@@ -96,6 +96,19 @@ export function addRoadLayout(
   return { ...manifest, road_layouts: [...manifest.road_layouts, layout] };
 }
 
+// Empties the Scene of every Scene Object, keeping what identifies the Scene
+// itself — its id and Jurisdiction — so the Content Maintainer starts the
+// layout over without creating a new Scene.
+export function clearSceneObjects(manifest: SceneManifest): SceneManifest {
+  return {
+    ...manifest,
+    road_layouts: [],
+    road_users: [],
+    static_features: [],
+    required_visible_objects: [],
+  };
+}
+
 export function setRoadParameters(
   manifest: SceneManifest,
   layoutId: string,

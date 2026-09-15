@@ -9,6 +9,9 @@ interface SceneCanvasProps {
   onPlaceComponent: (component: RoadComponentType, position: Position) => void;
   onMoveSceneObject: (sceneObjectId: string, position: Position) => void;
   onSelect: (sceneObjectId: string | null) => void;
+  // Fires once as a drag begins, so the whole drag is a single undo step
+  // rather than one per pointer move.
+  onBeginDrag: () => void;
 }
 
 // Offset between the pointer and the dragged object's own position, so a drag
@@ -52,6 +55,7 @@ export function SceneCanvas({
   onPlaceComponent,
   onMoveSceneObject,
   onSelect,
+  onBeginDrag,
 }: SceneCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -88,6 +92,7 @@ export function SceneCanvas({
 
     event.stopPropagation();
     onSelect(sceneObjectId);
+    onBeginDrag();
     event.currentTarget.setPointerCapture(event.pointerId);
     setDrag({
       sceneObjectId,
