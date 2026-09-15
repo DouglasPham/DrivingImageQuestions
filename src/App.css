@@ -52,6 +52,21 @@
   background: #fff;
 }
 
+.parameters {
+  min-width: 15rem;
+}
+
+.parameters p {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.parameters select {
+  padding: 0.35rem;
+}
+
 .scene-id {
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;

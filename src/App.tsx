@@ -4,12 +4,14 @@ import {
   addRoadLayout,
   createEmptyScene,
   moveRoadLayout,
+  setRoadParameters,
   type Position,
   type SceneManifest,
 } from "./scene/sceneManifest";
-import type { RoadComponentType } from "./scene/roadComponents";
+import type { RoadComponentType, RoadParameters } from "./scene/roadComponents";
 import { listScenes, loadScene, saveScene, type SceneSummary } from "./scene/sceneStorage";
 import { RoadPalette } from "./components/RoadPalette";
+import { RoadParametersPanel } from "./components/RoadParametersPanel";
 import { SceneCanvas } from "./components/SceneCanvas";
 import "./App.css";
 
@@ -17,8 +19,11 @@ function App() {
   const [scenes, setScenes] = useState<SceneSummary[]>([]);
   const [jurisdiction, setJurisdiction] = useState(JURISDICTIONS[0].code);
   const [currentScene, setCurrentScene] = useState<SceneManifest | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedLayout = currentScene?.road_layouts.find((l) => l.id === selectedId) ?? null;
 
   async function refreshScenes() {
     setScenes(await listScenes());
@@ -34,6 +39,7 @@ function App() {
     setError(null);
     try {
       setCurrentScene(createEmptyScene(jurisdiction));
+      setSelectedId(null);
       setUnsavedChanges(true);
     } catch (e) {
       setError(String(e));
@@ -44,6 +50,7 @@ function App() {
     setError(null);
     try {
       setCurrentScene(await loadScene(sceneId));
+      setSelectedId(null);
       setUnsavedChanges(false);
     } catch (e) {
       setError(String(e));
@@ -69,6 +76,12 @@ function App() {
 
   function handleMoveSceneObject(sceneObjectId: string, position: Position) {
     setCurrentScene((scene) => (scene ? moveRoadLayout(scene, sceneObjectId, position) : scene));
+    setUnsavedChanges(true);
+  }
+
+  function handleChangeParameters(changes: Partial<RoadParameters>) {
+    if (!selectedId) return;
+    setCurrentScene((scene) => (scene ? setRoadParameters(scene, selectedId, changes) : scene));
     setUnsavedChanges(true);
   }
 
@@ -125,9 +138,16 @@ function App() {
             <RoadPalette />
             <SceneCanvas
               scene={currentScene}
+              selectedId={selectedId}
               onPlaceComponent={handlePlaceComponent}
               onMoveSceneObject={handleMoveSceneObject}
+              onSelect={setSelectedId}
             />
+            {selectedLayout ? (
+              <RoadParametersPanel layout={selectedLayout} onChange={handleChangeParameters} />
+            ) : (
+              <p className="parameters">Select a road to edit its parameters.</p>
+            )}
           </div>
 
           <button type="button" onClick={handleSave} disabled={!unsavedChanges}>

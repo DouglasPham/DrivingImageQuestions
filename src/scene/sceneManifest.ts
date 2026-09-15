@@ -1,5 +1,9 @@
 import { findJurisdiction } from "./jurisdictions";
-import type { RoadComponentType } from "./roadComponents";
+import {
+  DEFAULT_ROAD_PARAMETERS,
+  type RoadComponentType,
+  type RoadParameters,
+} from "./roadComponents";
 
 export interface Position {
   x: number;
@@ -10,6 +14,7 @@ export interface RoadLayout {
   id: string;
   component: RoadComponentType;
   position: Position;
+  parameters: RoadParameters;
 }
 
 export interface RoadUser {
@@ -86,8 +91,24 @@ export function addRoadLayout(
     id: nextRoadLayoutId(manifest.road_layouts),
     component,
     position,
+    parameters: DEFAULT_ROAD_PARAMETERS,
   };
   return { ...manifest, road_layouts: [...manifest.road_layouts, layout] };
+}
+
+export function setRoadParameters(
+  manifest: SceneManifest,
+  layoutId: string,
+  changes: Partial<RoadParameters>,
+): SceneManifest {
+  return {
+    ...manifest,
+    road_layouts: manifest.road_layouts.map((layout) =>
+      layout.id === layoutId
+        ? { ...layout, parameters: { ...layout.parameters, ...changes } }
+        : layout,
+    ),
+  };
 }
 
 export function moveRoadLayout(

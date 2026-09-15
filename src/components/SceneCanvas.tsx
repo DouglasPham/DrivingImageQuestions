@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 import type { Position, SceneManifest } from "../scene/sceneManifest";
 import { ROAD_COMPONENT_DRAG_TYPE, type RoadComponentType } from "../scene/roadComponents";
-import { SCENE_VIEWBOX_SIZE, sceneToSvgElements } from "../scene/sceneSvg";
+import { SCENE_VIEWBOX_SIZE, sceneToSvgElements, type SvgElement } from "../scene/sceneSvg";
 
 interface SceneCanvasProps {
   scene: SceneManifest;
+  selectedId: string | null;
   onPlaceComponent: (component: RoadComponentType, position: Position) => void;
   onMoveSceneObject: (sceneObjectId: string, position: Position) => void;
+  onSelect: (sceneObjectId: string | null) => void;
 }
 
 // Offset between the pointer and the dragged object's own position, so a drag
@@ -17,9 +19,47 @@ interface Drag {
   offset: Position;
 }
 
-export function SceneCanvas({ scene, onPlaceComponent, onMoveSceneObject }: SceneCanvasProps) {
+// Bounds of everything belonging to one Scene Object, used only to draw the
+// selection outline. The outline is editor chrome drawn on top — it is never
+// mixed into the scene's own elements, which stay identical to the Source SVG.
+function boundsOf(elements: SvgElement[]): { x: number; y: number; width: number; height: number } | null {
+  const xs: number[] = [];
+  const ys: number[] = [];
+
+  for (const { tag, attrs } of elements) {
+    const n = (key: string) => Number(attrs[key]);
+    if (tag === "rect") {
+      xs.push(n("x"), n("x") + n("width"));
+      ys.push(n("y"), n("y") + n("height"));
+    } else if (tag === "circle") {
+      xs.push(n("cx") - n("r"), n("cx") + n("r"));
+      ys.push(n("cy") - n("r"), n("cy") + n("r"));
+    } else {
+      xs.push(n("x1"), n("x2"));
+      ys.push(n("y1"), n("y2"));
+    }
+  }
+
+  if (xs.length === 0) return null;
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+}
+
+export function SceneCanvas({
+  scene,
+  selectedId,
+  onPlaceComponent,
+  onMoveSceneObject,
+  onSelect,
+}: SceneCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
+
+  const elements = sceneToSvgElements(scene);
+  const selectionBounds = selectedId
+    ? boundsOf(elements.filter((e) => e.sceneObjectId === selectedId))
+    : null;
 
   // Pointer events arrive in screen pixels; the manifest stores viewBox user
   // units, so convert through the SVG's own transform rather than guessing.
@@ -46,6 +86,8 @@ export function SceneCanvas({ scene, onPlaceComponent, onMoveSceneObject }: Scen
     const pointer = toSceneCoords(event.clientX, event.clientY);
     if (!layout || !pointer) return;
 
+    event.stopPropagation();
+    onSelect(sceneObjectId);
     event.currentTarget.setPointerCapture(event.pointerId);
     setDrag({
       sceneObjectId,
@@ -71,11 +113,12 @@ export function SceneCanvas({ scene, onPlaceComponent, onMoveSceneObject }: Scen
       viewBox={`0 0 ${SCENE_VIEWBOX_SIZE} ${SCENE_VIEWBOX_SIZE}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
+      onPointerDown={() => onSelect(null)}
       onPointerMove={handlePointerMove}
       onPointerUp={() => setDrag(null)}
       onPointerCancel={() => setDrag(null)}
     >
-      {sceneToSvgElements(scene).map((element) => {
+      {elements.map((element) => {
         const Tag = element.tag;
         return (
           <Tag
@@ -89,6 +132,21 @@ export function SceneCanvas({ scene, onPlaceComponent, onMoveSceneObject }: Scen
           />
         );
       })}
+
+      {selectionBounds && (
+        <rect
+          className="selection-outline"
+          x={selectionBounds.x - 6}
+          y={selectionBounds.y - 6}
+          width={selectionBounds.width + 12}
+          height={selectionBounds.height + 12}
+          fill="none"
+          stroke="#2b6cb0"
+          strokeWidth={3}
+          strokeDasharray="8 6"
+          pointerEvents="none"
+        />
+      )}
     </svg>
   );
 }
